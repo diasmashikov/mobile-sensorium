@@ -10,7 +10,7 @@ Welcome to Mobile Sensorium, an innovative Flutter application designed to harne
 
 ## Getting Started
 To get started with Mobile Sensorium, follow these simple steps:
-1. **Clone the Repository:** `git clone https://github.com/yourusername/Mobile-Sensorium.git`
+1. **Clone the Repository:** `git clone https://github.com/вшфыьфыршлщм/ьobile-sensorium.git`
 2. **Install Dependencies:** Run `flutter pub get` in the project directory.
 3. **Run the Application:** Execute `flutter run` to launch the app on your device or emulator.
 
