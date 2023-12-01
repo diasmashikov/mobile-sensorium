@@ -1,4 +1,4 @@
-import 'package:mobile_sensorium/acceletometer_data.dart';
+import 'package:mobile_sensorium/model/acceletometer_data.dart';
 
 enum OrientationState { portrait, landscape, tilted, flat }
 

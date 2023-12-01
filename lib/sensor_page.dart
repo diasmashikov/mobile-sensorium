@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:mobile_sensorium/acceletometer_data.dart';
+import 'package:mobile_sensorium/database/accelerometer_db.dart';
+import 'package:mobile_sensorium/database/database_service.dart';
+import 'package:mobile_sensorium/model/accelerometer_record.dart';
+import 'package:mobile_sensorium/model/acceletometer_data.dart';
 import 'package:mobile_sensorium/orientation_manager.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 
@@ -16,13 +19,14 @@ class _SensorPageState extends State<SensorPage> {
   AccelerometerData _accelerometerData =
       AccelerometerData(x: 0.0, y: 0.0, z: 0.0);
   final OrientationManager _orientationManager = OrientationManager();
+  final accelerometerDB = AccelerometerDB();
 
   @override
   void initState() {
     super.initState();
 
     accelerometerEventStream(samplingPeriod: SensorInterval.normalInterval)
-        .listen((event) {
+        .listen((event) async {
       setState(() {
         _accelerometerData =
             AccelerometerData(x: event.x, y: event.y, z: event.z);
@@ -30,6 +34,16 @@ class _SensorPageState extends State<SensorPage> {
         _orientationState =
             _orientationManager.determineOrientation(_accelerometerData);
       });
+
+      final record = AccelerometerRecord(
+        timestamp: DateTime.now().toString(),
+        x: _accelerometerData.x,
+        y: _accelerometerData.y,
+        z: _accelerometerData.z,
+        orientation: _orientationState.toString(),
+      );
+
+      await accelerometerDB.createAccelerometerRecord(record);
     });
   }
 
@@ -38,7 +52,18 @@ class _SensorPageState extends State<SensorPage> {
     return Center(
         child: Column(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: [_buildOrientation(), Divider(), _buildMetrics()],
+      children: [
+        _buildOrientation(),
+        Divider(),
+        _buildMetrics(),
+        OutlinedButton(
+            onPressed: () async {
+              List<AccelerometerRecord> records =
+                  await accelerometerDB.fetchAllAccelerometerRecords();
+              print(records);
+            },
+            child: const Text("Show accelerometer data"))
+      ],
     ));
   }
 
