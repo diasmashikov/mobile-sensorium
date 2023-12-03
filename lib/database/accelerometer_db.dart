@@ -5,6 +5,7 @@ import 'package:sqflite/sqflite.dart';
 class AccelerometerDB {
   final tableName = "accelerometer_records";
   late final Database db;
+  bool isInitialized = false;
 
   AccelerometerDB() {
     _init();
@@ -12,6 +13,7 @@ class AccelerometerDB {
 
   void _init() async {
     db = await DatabaseService().database;
+    isInitialized = true;
   }
 
   Future<void> createTable(Database database) async {
@@ -22,14 +24,22 @@ class AccelerometerDB {
       "x" REAL,
       "y" REAL,
       "z" REAL,
-      orientation TEXT
+      "orientation" TEXT,
+      "action" TEXT
       );""");
   }
 
   Future<void> createAccelerometerRecord(AccelerometerRecord record) async {
     await db.rawInsert(
-      'INSERT INTO $tableName (timestamp, x, y, z, orientation) VALUES (?, ?, ?, ?, ?)',
-      [record.timestamp, record.x, record.y, record.z, record.orientation],
+      'INSERT INTO $tableName (timestamp, x, y, z, orientation, action) VALUES (?, ?, ?, ?, ?, ?)',
+      [
+        record.timestamp,
+        record.x,
+        record.y,
+        record.z,
+        record.orientation,
+        record.action
+      ],
     );
   }
 
@@ -40,5 +50,15 @@ class AccelerometerDB {
     return List.generate(result.length, (i) {
       return AccelerometerRecord.fromMap(result[i]);
     });
+  }
+
+  Future<void> clearDatabase() async {
+    await db.rawDelete('DELETE FROM $tableName');
+  }
+
+  Future<int> getCount(String tableName) async {
+    final data = await db.rawQuery('SELECT COUNT(*) FROM $tableName');
+    int count = Sqflite.firstIntValue(data) ?? 0;
+    return count;
   }
 }
