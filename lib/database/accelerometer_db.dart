@@ -6,11 +6,7 @@ class AccelerometerDB {
   final tableName = "accelerometer_records";
   late final Database db;
 
-  AccelerometerDB() {
-    _init();
-  }
-
-  void _init() async {
+  Future<void> init() async {
     db = await DatabaseService().database;
   }
 
@@ -54,7 +50,7 @@ class AccelerometerDB {
     await db.rawDelete('DELETE FROM $tableName');
   }
 
-  Future<int> getCount(String tableName) async {
+  Future<int> getCount() async {
     final data = await db.rawQuery('SELECT COUNT(*) FROM $tableName');
     int count = Sqflite.firstIntValue(data) ?? 0;
     return count;

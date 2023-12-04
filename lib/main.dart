@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:mobile_sensorium/database/accelerometer_db.dart';
 import 'package:mobile_sensorium/sensor_page.dart';
+import 'package:mobile_sensorium/service_locator.dart';
+import 'package:provider/provider.dart';
 
-void main() {
-  runApp(const MainApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  setupServiceLocator(); // Set up get_it
+  await getIt<AccelerometerDB>().init();
+
+  runApp(MainApp());
 }
 
 class MainApp extends StatelessWidget {

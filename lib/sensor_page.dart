@@ -4,6 +4,8 @@ import 'package:mobile_sensorium/database/database_service.dart';
 import 'package:mobile_sensorium/model/accelerometer_record.dart';
 import 'package:mobile_sensorium/model/acceletometer_data.dart';
 import 'package:mobile_sensorium/orientation_manager.dart';
+import 'package:mobile_sensorium/service_locator.dart';
+import 'package:provider/provider.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 
 class SensorPage extends StatefulWidget {
@@ -19,12 +21,14 @@ class _SensorPageState extends State<SensorPage> {
   AccelerometerData _accelerometerData =
       AccelerometerData(x: 0.0, y: 0.0, z: 0.0);
   final OrientationManager _orientationManager = OrientationManager();
-  final accelerometerDB = AccelerometerDB();
+  int accelerometerRecordCount = 0;
+  final accelerometerDB = getIt<AccelerometerDB>();
 
   @override
   void initState() {
     super.initState();
 
+    updateRecordCount();
     accelerometerEventStream(samplingPeriod: SensorInterval.normalInterval)
         .listen((event) async {
       setState(() {
@@ -43,7 +47,15 @@ class _SensorPageState extends State<SensorPage> {
           orientation: _orientationState.toString(),
           action: "walking");
 
-      await accelerometerDB.createAccelerometerRecord(record);
+      accelerometerDB.createAccelerometerRecord(record);
+    });
+  }
+
+  Future<void> updateRecordCount() async {
+    int count =
+        await accelerometerDB.getCount(); // Use your method to get the count
+    setState(() {
+      accelerometerRecordCount = count;
     });
   }
 
@@ -53,6 +65,7 @@ class _SensorPageState extends State<SensorPage> {
         child: Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
+        Text('Number of Accelerometer Records: $accelerometerRecordCount'),
         _buildOrientation(),
         Divider(),
         _buildMetrics(_accelerometerData),
