@@ -6,7 +6,6 @@ Welcome to Mobile Sensorium, an innovative Flutter application designed to harne
 ## Features
 - **Sensor Data Collection:** Leverage the accelerometer, gyroscope, and magnetometer to gather real-time motion and environmental data.
 - **Showing the orientation state of the mobile device**
-- **Integration of sqflite local database to collect and utilize stored sensor data overtime for data analysis and ML usage
 - **Machine Learning Integration:** Innovative methods for applying machine learning algorithms to sensor data.
 - **User-Friendly Interface:** A sleek and intuitive user interface, crafted using Flutter, for easy interaction and data visualization.
 
