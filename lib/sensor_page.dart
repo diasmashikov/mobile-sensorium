@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mobile_sensorium/accelerometer_data_display_page.dart';
+import 'package:mobile_sensorium/bloc/sensor_bloc/sensor_bloc.dart';
+import 'package:mobile_sensorium/bloc/sensor_bloc/sensor_event.dart';
+import 'package:mobile_sensorium/bloc/sensor_bloc/sensor_state.dart';
 import 'package:mobile_sensorium/database/accelerometer_db.dart';
 import 'package:mobile_sensorium/database/database_service.dart';
 import 'package:mobile_sensorium/model/accelerometer_record.dart';
@@ -16,16 +20,7 @@ class SensorPage extends StatefulWidget {
 }
 
 class _SensorPageState extends State<SensorPage> {
-  OrientationState _orientationState = OrientationState.portrait;
-  double pi = 3.14;
-
-  AccelerometerData _accelerometerData =
-      AccelerometerData(x: 0.0, y: 0.0, z: 0.0);
-
-  final OrientationManager _orientationManager = OrientationManager();
-
-  final accelerometerDB = AccelerometerDB();
-
+  late SensorBloc sensorBloc;
   bool isCollectingData = false;
   String selectedAction = "walking";
   List<String> actions = ["walking", "running"];
@@ -33,100 +28,79 @@ class _SensorPageState extends State<SensorPage> {
   @override
   void initState() {
     super.initState();
-
-    accelerometerEventStream(samplingPeriod: SensorInterval.normalInterval)
-        .listen((event) async {
-      _accelerometerData =
-          AccelerometerData(x: event.x, y: event.y, z: event.z);
-
-      _orientationState =
-          _orientationManager.determineOrientation(_accelerometerData);
-
-      if (isCollectingData) {
-        final record = AccelerometerRecord(
-            timestamp: DateTime.now().toString(),
-            x: _accelerometerData.x,
-            y: _accelerometerData.y,
-            z: _accelerometerData.z,
-            orientation: _orientationState.toString(),
-            action: selectedAction);
-        accelerometerDB.createAccelerometerRecord(record);
-      }
-    });
+    sensorBloc = SensorBloc();
   }
 
   void toggleDataCollection() {
+    if (isCollectingData) {
+      sensorBloc.add(StopDataCollectionEvent());
+    } else {
+      sensorBloc.add(StartDataCollectionEvent());
+    }
     setState(() {
       isCollectingData = !isCollectingData;
     });
   }
 
-  Stream<int> countStream() async* {
-    String tableName = "accelerometer_records";
-
-    yield await accelerometerDB.getCount(tableName);
+  @override
+  void dispose() {
+    sensorBloc.close(); // Don't forget to close the BLoC
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Center(
+    return BlocProvider(
+      create: (context) => sensorBloc,
+      child: Center(
         child: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        StreamBuilder<int>(
-          stream: countStream(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return CircularProgressIndicator();
-            } else if (snapshot.hasData) {
-              return Text('Record count: ${snapshot.data}');
-            } else if (snapshot.hasError) {
-              return Text('Error: ${snapshot.error}');
-            } else {
-              return const Column(
-                children: [],
-              );
-            }
-          },
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            BlocBuilder<SensorBloc, SensorDataState>(
+              builder: (context, state) {
+                return Text(
+                    'Orientation: ${state.orientationState.toString().split('.').last}');
+              },
+            ),
+            const Divider(),
+            BlocBuilder<SensorBloc, SensorDataState>(
+              builder: (context, state) {
+                return _buildMetrics(state.accelerometerData);
+              },
+            ),
+            DropdownButton<String>(
+              value: selectedAction,
+              onChanged: (String? newValue) {
+                setState(() {
+                  selectedAction = newValue!;
+                });
+              },
+              items: actions.map<DropdownMenuItem<String>>((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(value),
+                );
+              }).toList(),
+            ),
+            OutlinedButton(
+              onPressed: toggleDataCollection,
+              child: Text(isCollectingData
+                  ? "Stop Collecting Data"
+                  : "Start Collecting Data"),
+            ),
+            OutlinedButton(
+              onPressed: () async {
+                // Clear database logic here
+              },
+              child: const Text("Clear database"),
+            ),
+          ],
         ),
-        _buildOrientation(),
-        const Divider(),
-        AccelerometerDataDisplay(),
-        DropdownButton<String>(
-          value: selectedAction,
-          onChanged: (String? newValue) {
-            setState(() {
-              selectedAction = newValue!;
-            });
-          },
-          items: actions.map<DropdownMenuItem<String>>((String value) {
-            return DropdownMenuItem<String>(
-              value: value,
-              child: Text(value),
-            );
-          }).toList(),
-        ),
-        OutlinedButton(
-          onPressed: toggleDataCollection,
-          child: Text(isCollectingData
-              ? "Stop Collecting Data"
-              : "Start Collecting Data"),
-        ),
-        OutlinedButton(
-          onPressed: () async {
-            accelerometerDB.clearDatabase();
-          },
-          child: const Text("Clear database"),
-        ),
-      ],
-    ));
+      ),
+    );
   }
 
-  Widget _buildOrientation() {
-    return Text('Orientation: ${_orientationState.toString().split('.').last}');
-  }
-
-  Widget _buildMetrics() {
+  Widget _buildMetrics(AccelerometerData data) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: <Widget>[
@@ -134,22 +108,20 @@ class _SensorPageState extends State<SensorPage> {
         const SizedBox(height: 20),
         const Text('X-Axis: '),
         LinearProgressIndicator(
-          value: normalize(_accelerometerData.x),
+          value: normalize(data.x),
           backgroundColor: Colors.amber,
         ),
-        Text('${_accelerometerData.x}'),
+        Text('${data.x}'),
         const SizedBox(height: 10),
         const Text('Y-Axis: '),
         LinearProgressIndicator(
-            value: normalize(_accelerometerData.y),
-            backgroundColor: Colors.green),
-        Text('${_accelerometerData.y}'),
+            value: normalize(data.y), backgroundColor: Colors.green),
+        Text('${data.y}'),
         const SizedBox(height: 10),
         const Text('Z-Axis: '),
         LinearProgressIndicator(
-            value: normalize(_accelerometerData.z),
-            backgroundColor: Colors.blue),
-        Text('${_accelerometerData.z}'),
+            value: normalize(data.z), backgroundColor: Colors.blue),
+        Text('${data.z}'),
         const SizedBox(height: 20),
       ],
     );

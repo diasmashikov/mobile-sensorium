@@ -5,7 +5,6 @@ import 'package:sqflite/sqflite.dart';
 class AccelerometerDB {
   final tableName = "accelerometer_records";
   late final Database db;
-  bool isInitialized = false;
 
   AccelerometerDB() {
     _init();
@@ -13,7 +12,6 @@ class AccelerometerDB {
 
   void _init() async {
     db = await DatabaseService().database;
-    isInitialized = true;
   }
 
   Future<void> createTable(Database database) async {
