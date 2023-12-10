@@ -23,7 +23,7 @@ class DatabaseService {
     final path = await fullPath;
     var database = await openDatabase(
       path,
-      version: 4,
+      version: 5,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
       singleInstance: true,
@@ -33,7 +33,8 @@ class DatabaseService {
 
   Future<void> _onUpgrade(
       Database database, int oldVersion, int newVersion) async {
-    database.execute('ALTER TABLE accelerometer_records ADD action TEXT');
+    await database.execute('DROP TABLE IF EXISTS accelerometer_records');
+    _onCreate(database, newVersion);
   }
 
   Future<void> _onCreate(Database database, int version) async =>

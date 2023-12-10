@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mobile_sensorium/data_page.dart';
 import 'package:mobile_sensorium/database/accelerometer_db.dart';
 import 'package:mobile_sensorium/database/database_service.dart';
 import 'package:mobile_sensorium/model/accelerometer_record.dart';
@@ -24,11 +25,18 @@ class _SensorPageState extends State<SensorPage> {
   int accelerometerRecordCount = 0;
   final accelerometerDB = getIt<AccelerometerDB>();
 
+  bool isSaving = false;
+  String selectedAction = 'walking';
+  final List<String> actions = ['walking', 'running', 'sitting', 'standing'];
+
+  DateTime? startTime;
+
   @override
   void initState() {
     super.initState();
 
     updateRecordCount();
+
     accelerometerEventStream(samplingPeriod: SensorInterval.normalInterval)
         .listen((event) async {
       setState(() {
@@ -39,21 +47,36 @@ class _SensorPageState extends State<SensorPage> {
             _orientationManager.determineOrientation(_accelerometerData);
       });
 
-      final record = AccelerometerRecord(
-          timestamp: DateTime.now().toString(),
-          x: _accelerometerData.x,
-          y: _accelerometerData.y,
-          z: _accelerometerData.z,
-          orientation: _orientationState.toString(),
-          action: "walking");
+      if (isSaving && startTime != null) {
+        final now = DateTime.now();
+        final elapsedMilliseconds = now.difference(startTime!).inMilliseconds;
 
-      accelerometerDB.createAccelerometerRecord(record);
+        final record = AccelerometerRecord(
+            elapsedMilliseconds: elapsedMilliseconds,
+            x: _accelerometerData.x,
+            y: _accelerometerData.y,
+            z: _accelerometerData.z,
+            orientation: _orientationState.toString(),
+            action: selectedAction);
+
+        accelerometerDB.createAccelerometerRecord(record);
+      }
+    });
+  }
+
+  void toggleSaving() {
+    setState(() {
+      isSaving = !isSaving;
+      if (isSaving) {
+        startTime = DateTime.now();
+      } else {
+        startTime = null;
+      }
     });
   }
 
   Future<void> updateRecordCount() async {
-    int count =
-        await accelerometerDB.getCount(); // Use your method to get the count
+    int count = await accelerometerDB.getCount();
     setState(() {
       accelerometerRecordCount = count;
     });
@@ -66,18 +89,44 @@ class _SensorPageState extends State<SensorPage> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text('Number of Accelerometer Records: $accelerometerRecordCount'),
+        const Divider(),
         _buildOrientation(),
-        Divider(),
         _buildMetrics(_accelerometerData),
+        const Divider(),
+        DropdownButton<String>(
+            value: selectedAction,
+            items: actions
+                .map((action) => DropdownMenuItem(
+                      value: action,
+                      child: Text(action),
+                    ))
+                .toList(),
+            onChanged: (newValue) {
+              setState(() {
+                selectedAction = newValue!;
+              });
+            }),
         OutlinedButton(
-            onPressed: () async {
-              List<AccelerometerRecord> records =
-                  await accelerometerDB.fetchAllAccelerometerRecords();
-              print(records);
-            },
-            child: const Text("Show accelerometer data"))
+            onPressed: toggleSaving,
+            child: Text(isSaving ? "Stop Saving Data" : "Start Saving Data")),
+        if (isSaving)
+          Text(
+            "Actively saving records for action " + selectedAction,
+            style: TextStyle(color: Colors.green),
+          ),
+        ElevatedButton(
+          onPressed: () => navigateToDataPage(context),
+          child: const Text('View Data Page'),
+        ),
       ],
     ));
+  }
+
+  void navigateToDataPage(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const DataPage()),
+    );
   }
 
   Widget _buildOrientation() {

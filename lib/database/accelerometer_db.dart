@@ -14,7 +14,7 @@ class AccelerometerDB {
     await database.execute(""" 
     CREATE TABLE IF NOT EXISTS $tableName (
       "id" INTEGER PRIMARY KEY AUTOINCREMENT,
-      "timestamp" INTEGER,
+      elapsed_milliseconds INTEGER,
       "x" REAL,
       "y" REAL,
       "z" REAL,
@@ -25,9 +25,9 @@ class AccelerometerDB {
 
   Future<void> createAccelerometerRecord(AccelerometerRecord record) async {
     await db.rawInsert(
-      'INSERT INTO $tableName (timestamp, x, y, z, orientation, action) VALUES (?, ?, ?, ?, ?, ?)',
+      'INSERT INTO $tableName (elapsed_milliseconds, x, y, z, orientation, action) VALUES (?, ?, ?, ?, ?, ?)',
       [
-        record.timestamp,
+        record.elapsedMilliseconds,
         record.x,
         record.y,
         record.z,
@@ -46,13 +46,32 @@ class AccelerometerDB {
     });
   }
 
-  Future<void> clearDatabase() async {
-    await db.rawDelete('DELETE FROM $tableName');
+  Future<List<AccelerometerRecord>> fetchRecordsByAction(String action) async {
+    final List<Map<String, dynamic>> result = await db.rawQuery(
+      'SELECT * FROM $tableName WHERE action = ?',
+      [action],
+    );
+
+    return List.generate(result.length, (i) {
+      return AccelerometerRecord.fromMap(result[i]);
+    });
   }
 
   Future<int> getCount() async {
     final data = await db.rawQuery('SELECT COUNT(*) FROM $tableName');
     int count = Sqflite.firstIntValue(data) ?? 0;
     return count;
+  }
+
+  Future<int> getCountByAction(String action) async {
+    final data = await db.rawQuery(
+      'SELECT COUNT(*) FROM $tableName WHERE action = ?',
+      [action],
+    );
+    return Sqflite.firstIntValue(data) ?? 0;
+  }
+
+  Future<void> clearDatabase() async {
+    await db.rawDelete('DELETE FROM $tableName');
   }
 }
