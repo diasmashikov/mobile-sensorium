@@ -1,12 +1,15 @@
+import 'dart:async';
+
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
+
 import 'package:mobile_sensorium/data_page.dart';
 import 'package:mobile_sensorium/database/accelerometer_db.dart';
-import 'package:mobile_sensorium/database/database_service.dart';
 import 'package:mobile_sensorium/model/accelerometer_record.dart';
 import 'package:mobile_sensorium/model/acceletometer_data.dart';
 import 'package:mobile_sensorium/orientation_manager.dart';
 import 'package:mobile_sensorium/service_locator.dart';
-import 'package:provider/provider.dart';
+
 import 'package:sensors_plus/sensors_plus.dart';
 
 class SensorPage extends StatefulWidget {
@@ -30,6 +33,10 @@ class _SensorPageState extends State<SensorPage> {
   final List<String> actions = ['walking', 'running', 'sitting', 'standing'];
 
   DateTime? startTime;
+
+  int countdown = 0;
+
+  final player = AudioPlayer();
 
   @override
   void initState() {
@@ -65,14 +72,46 @@ class _SensorPageState extends State<SensorPage> {
   }
 
   void toggleSaving() {
-    setState(() {
-      isSaving = !isSaving;
-      if (isSaving) {
-        startTime = DateTime.now();
-      } else {
+    if (!isSaving) {
+      setState(() {
+        countdown = 3;
+      });
+      Timer.periodic(Duration(seconds: 1), (timer) {
+        if (countdown > 1) {
+          setState(() {
+            countdown--;
+          });
+        } else {
+          countdown--;
+          setState(() {
+            isSaving = true;
+
+            startTime = DateTime.now();
+          });
+          timer.cancel();
+          playStartSound();
+        }
+      });
+    } else {
+      setState(() {
+        isSaving = false;
         startTime = null;
-      }
-    });
+      });
+    }
+  }
+
+  Future<void> playStartSound() async {
+    try {
+      await player.seek(const Duration(milliseconds: 2000));
+      await player.play(AssetSource('erzhan_wake_up.mp3'));
+
+      Timer(Duration(seconds: 2), () {
+        player.stop(); // This will stop the audio after 3 seconds
+      });
+    } catch (e) {
+      // Handle the error here
+      print("Error playing audio: $e");
+    }
   }
 
   Future<void> updateRecordCount() async {
@@ -109,6 +148,7 @@ class _SensorPageState extends State<SensorPage> {
         OutlinedButton(
             onPressed: toggleSaving,
             child: Text(isSaving ? "Stop Saving Data" : "Start Saving Data")),
+        if (countdown > 0) Text('The saving starts in $countdown...'),
         if (isSaving)
           Text(
             "Actively saving records for action " + selectedAction,
@@ -118,6 +158,7 @@ class _SensorPageState extends State<SensorPage> {
           onPressed: () => navigateToDataPage(context),
           child: const Text('View Data Page'),
         ),
+        ElevatedButton(onPressed: playStartSound, child: Text("Make Sound"))
       ],
     ));
   }

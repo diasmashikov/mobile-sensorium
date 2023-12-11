@@ -7,6 +7,7 @@ environment:
   sdk: '>=3.2.1 <4.0.0'
 
 dependencies:
+  audioplayers: ^5.2.1
   csv: ^5.1.1
   flutter:
     sdk: flutter
@@ -26,3 +27,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/erzhan_wake_up.mp3
