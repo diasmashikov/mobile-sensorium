@@ -158,7 +158,15 @@ class _SensorPageState extends State<SensorPage> {
           onPressed: () => navigateToDataPage(context),
           child: const Text('View Data Page'),
         ),
-        ElevatedButton(onPressed: playStartSound, child: Text("Make Sound"))
+        ElevatedButton(onPressed: playStartSound, child: Text("Make Sound")),
+        ElevatedButton(
+            onPressed: () => {
+                  Text(
+                    "Overall",
+                    style: TextStyle(backgroundColor: Colors.amber),
+                  )
+                },
+            child: Text("Make Sound"))
       ],
     ));
   }
